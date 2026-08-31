@@ -14,9 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             asset_name: mdlive-linux-x86_64
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-22.04-arm
             asset_name: mdlive-linux-arm64
           - os: macos-latest
             asset_name: mdlive-darwin-arm64
