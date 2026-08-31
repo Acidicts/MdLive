@@ -16,8 +16,8 @@ for pkg in ['starlette', 'markdown', 'watchfiles']:
     hiddenimports += h
 
 a = Analysis(
-    ['mdlive/cli.py'],
-    pathex=[],
+    ['run.py'],
+    pathex=['.'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,

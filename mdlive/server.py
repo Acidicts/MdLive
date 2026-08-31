@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import markdown
@@ -46,11 +47,13 @@ class MDLiveServer:
         if not self.md_path.exists():
             raise FileNotFoundError(self.md_path)
         self.clients: set[WebSocket] = set()
-        self.app = Starlette(routes=[
-            Route("/", self.index),
-            WebSocketRoute("/ws", self.ws_endpoint),
-        ])
-        self.app.add_event_handler("startup", self.on_startup)
+        self.app = Starlette(
+            routes=[
+                Route("/", self.index),
+                WebSocketRoute("/ws", self.ws_endpoint),
+            ],
+            lifespan=self.lifespan,
+        )
 
     def render(self) -> str:
         text = self.md_path.read_text(encoding="utf-8")
@@ -88,5 +91,10 @@ class MDLiveServer:
                     await self.broadcast_reload()
                     break
 
-    async def on_startup(self):
-        asyncio.create_task(self.watch_loop())
+    @asynccontextmanager
+    async def lifespan(self, app):
+        task = asyncio.create_task(self.watch_loop())
+        try:
+            yield
+        finally:
+            task.cancel()
