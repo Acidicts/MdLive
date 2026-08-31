@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="yourname/mdlive"
+REPO="Acidicts/MdLive"
 INSTALL_DIR="${MDLIVE_INSTALL_DIR:-$HOME/.local/bin}"
 
 info()  { printf '\033[1;34m==>\033[0m %s\n' "$1"; }
