@@ -5,10 +5,8 @@ Serve a Markdown file as live-updating HTML over a local port.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourname/mdlive/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Acidicts/MdLive/main/install.sh | bash
 ```
-
-(Replace `yourname/mdlive` in `install.sh` and this README with your actual GitHub repo.)
 
 Or via pip, for development:
 
