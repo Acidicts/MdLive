@@ -20,7 +20,7 @@ jobs:
             asset_name: mdlive-linux-arm64
           - os: macos-latest
             asset_name: mdlive-darwin-arm64
-          - os: macos-13
+          - os: macos-15-intel
             asset_name: mdlive-darwin-x86_64
     runs-on: ${{ matrix.os }}
     steps:
