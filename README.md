@@ -22,6 +22,24 @@ mdlive notes.md --port 8000
 
 Open `http://127.0.0.1:8000`. Edit `notes.md` and the page reloads automatically.
 
+## Markdown renderer
+
+mdlive uses its own built-in Markdown renderer (`mdlive/md_block.py` + `mdlive/md_inline.py`) instead of a third-party library. It's a real two-pass parser - block structure first, then inline spans - so nesting (lists inside lists, checklists inside lists, blockquotes inside lists, etc.) is handled correctly at any depth by construction, rather than by pattern-matching that can silently break on deeper nesting.
+
+Supported:
+
+- Headings (`#` through `######`, plus setext `===`/`---` underline style)
+- Paragraphs, blockquotes (nestable, with lazy continuation lines)
+- Ordered and unordered lists, nestable to any depth, tight or loose
+- GitHub-style task lists (`- [ ]` / `- [x]` / `- [X]`) as real, correctly-checked `<input type="checkbox">` elements at any nesting depth
+- Fenced code blocks (` ``` ` / `~~~`) with language class for syntax highlighters
+- Tables with column alignment (`:---`, `:---:`, `---:`)
+- Horizontal rules (`---`, `***`, `___`)
+- Bold, italic, bold+italic, strikethrough, inline code, links, images, autolinks (`<https://...>`)
+- HTML-escaping throughout, so raw HTML/script content in a document renders as visible text rather than executing
+
+Not supported (yet): reference-style links (`[text][ref]`), footnotes, definition lists, HTML block passthrough. These weren't needed for the current use case; contributions welcome.
+
 ## Updating and uninstalling
 
 ```bash

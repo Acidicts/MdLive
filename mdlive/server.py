@@ -2,12 +2,13 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-import markdown
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from watchfiles import awatch
+
+from mdlive import md_block
 
 PAGE_TEMPLATE = """<!DOCTYPE html>
 <html>
@@ -18,9 +19,12 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   body {{ max-width: 800px; margin: 2rem auto; font-family: sans-serif; line-height: 1.6; padding: 0 1rem; }}
   pre {{ background: #f4f4f4; padding: 1rem; overflow-x: auto; }}
   code {{ background: #f4f4f4; padding: 0.1rem 0.3rem; }}
-  ul.checklist {{ list-style: none; padding-left: 0.5rem; }}
-  ul.checklist li {{ margin: 0.3rem 0; }}
-  ul.checklist input[type="checkbox"] {{ margin-right: 0.5rem; transform: scale(1.2); vertical-align: middle; }}
+  li input[type="checkbox"] {{ margin-right: 0.4rem; transform: scale(1.15); vertical-align: middle; }}
+  blockquote {{ border-left: 3px solid #ccc; margin-left: 0; padding-left: 1rem; color: #555; }}
+  table {{ border-collapse: collapse; }}
+  th, td {{ border: 1px solid #ccc; padding: 0.3rem 0.6rem; }}
+  img {{ max-width: 100%; }}
+  hr {{ border: none; border-top: 1px solid #ccc; margin: 1.5rem 0; }}
 </style>
 </head>
 <body>
@@ -60,10 +64,7 @@ class MDLiveServer:
 
     def render(self) -> str:
         text = self.md_path.read_text(encoding="utf-8")
-        body = markdown.markdown(
-            text,
-            extensions=["fenced_code", "tables", "toc", "codehilite", "markdown_checklist.extension"],
-        )
+        body = md_block.render(text)
         return PAGE_TEMPLATE.format(title=self.md_path.name, body=body)
 
     async def index(self, request):

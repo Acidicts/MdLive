@@ -4,8 +4,6 @@ version = "0.1.0"
 description = "Serve a Markdown file as live-updating HTML"
 requires-python = ">=3.9"
 dependencies = [
-    "markdown>=3.5",
-    "markdown-checklist>=0.4.4",
     "watchfiles>=0.21",
     "starlette>=0.37",
     "uvicorn>=0.27",
