@@ -48,12 +48,12 @@ add_to_path() {
 
   if [ -f "$profile" ] && grep -qF "$INSTALL_DIR" "$profile"; then
     info "PATH already configured in $profile"
-    return
+  else
+    mkdir -p "$(dirname "$profile")"
+    printf '\n# mdlive\n%s\n' "$line" >> "$profile"
+    info "Added $INSTALL_DIR to PATH in $profile"
   fi
 
-  mkdir -p "$(dirname "$profile")"
-  printf '\n# mdlive\n%s\n' "$line" >> "$profile"
-  info "Added $INSTALL_DIR to PATH in $profile"
   info "Run: source $profile"
 }
 

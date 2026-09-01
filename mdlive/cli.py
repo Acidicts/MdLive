@@ -70,6 +70,15 @@ def _add_to_path(install_dir: str) -> None:
     print(f"Run: source {profile}")
 
 
+def _profile_path() -> Path:
+    shell = Path(os.environ.get("SHELL", "/bin/bash")).name
+    if shell == "zsh":
+        return Path.home() / ".zshrc"
+    if shell == "fish":
+        return Path.home() / ".config" / "fish" / "config.fish"
+    return Path.home() / ".bashrc"
+
+
 def cmd_update(args):
     current_path = _current_binary_path()
     print(f"Current binary: {current_path}")
@@ -111,6 +120,9 @@ def cmd_update(args):
         tmp_path.replace(current_path)
         print(f"Updated mdlive at {current_path}")
         _add_to_path(str(current_path.parent))
+        profile = _profile_path()
+        if profile.exists():
+            print(f"Run: source {profile}")
     except Exception as exc:
         print(f"Update failed: {exc}", file=sys.stderr)
         tmp_path.unlink(missing_ok=True)
