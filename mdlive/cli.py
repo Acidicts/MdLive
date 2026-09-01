@@ -1,19 +1,18 @@
 import argparse
+import json
 import os
 import platform
 import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
-import uvicorn
-
-from mdlive.server import MDLiveServer
-
 REPO = "Acidicts/MdLive"
 RELEASE_URL_TEMPLATE = "https://github.com/{repo}/releases/download/latest/{asset}"
+DEFAULT_PORT = 8000
 
 
 def _detect_asset_name() -> str:
@@ -40,16 +39,8 @@ def _detect_asset_name() -> str:
 
 
 def _current_binary_path() -> Path:
-    """
-    Resolve the path to the actual installed mdlive executable, not the
-    PyInstaller-extracted temp directory (sys.executable inside a frozen
-    binary points at the real launcher, so this is safe for both frozen
-    and non-frozen (pip-installed) runs).
-    """
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve()
-    # Running via `python -m` or pip-installed console script: fall back to
-    # locating the mdlive script on PATH.
     which = shutil.which("mdlive")
     if which:
         return Path(which).resolve()
@@ -87,8 +78,6 @@ def cmd_update(args):
 
         tmp_path.chmod(0o755)
 
-        # Sanity check the downloaded binary actually runs before replacing
-        # the current one.
         result = subprocess.run(
             [str(tmp_path), "--help"], capture_output=True, timeout=10
         )
@@ -96,9 +85,6 @@ def cmd_update(args):
             print("Downloaded binary failed to run. Aborting update.", file=sys.stderr)
             sys.exit(1)
 
-        # Atomic replace. On Linux/macOS this works even while the current
-        # process is executing from current_path, since the running process
-        # holds its own inode reference.
         tmp_path.replace(current_path)
         print(f"Updated mdlive at {current_path}")
     except Exception as exc:
@@ -131,45 +117,123 @@ def cmd_uninstall(args):
 
 
 def cmd_serve(args):
+    from mdlive.server import MDLiveServer
+    from mdlive.tui import MDLiveTUI
+
     server = MDLiveServer(args.file)
-    uvicorn.run(server.app, host=args.host, port=args.port, log_level="info")
+    tui = MDLiveTUI(server, host=args.host, port=args.port)
+    tui.run()
+
+
+def _api_request(method: str, port: int, path: str, data: dict | None = None):
+    url = f"http://127.0.0.1:{port}{path}"
+    body = json.dumps(data).encode() if data else None
+    req = urllib.request.Request(url, data=body, method=method)
+    req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        try:
+            err = json.loads(body)
+            print(f"Error: {err.get('error', body)}", file=sys.stderr)
+        except Exception:
+            print(f"Error: HTTP {e.code} - {body}", file=sys.stderr)
+        sys.exit(1)
+    except urllib.error.URLError:
+        print(
+            f"Error: No mdlive server running on port {port}. "
+            "Start one first with: mdlive <file>",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+def cmd_add(args):
+    result = _api_request(
+        "POST",
+        args.port,
+        "/api/add",
+        {"file": args.file, "path": args.url_path},
+    )
+    print(f"Added {result['file']} at {result['path']}")
+
+
+def cmd_remove(args):
+    result = _api_request(
+        "DELETE",
+        args.port,
+        "/api/remove",
+        {"path": args.url_path},
+    )
+    print(f"Removed {result['path']}")
+
+
+HELP_TEXT = """\
+mdlive - serve markdown files with live reload
+
+Usage:
+  mdlive <file>                   Start server, serve <file> at /
+  mdlive add <file> <path>        Add <file> at /<path>
+  mdlive remove <path>            Remove /<path>
+  mdlive update                   Update mdlive binary
+  mdlive uninstall                Remove the mdlive binary
+"""
 
 
 def main():
-    # Handle update/uninstall as reserved subcommands before argparse sees
-    # them, so a file literally named "update" or "uninstall" in the CWD
-    # can never be misinterpreted as the subcommand (argparse's positional +
-    # subparser interaction is ambiguous in exactly that case).
-    if len(sys.argv) > 1 and sys.argv[1] == "update":
-        update_parser = argparse.ArgumentParser(prog="mdlive update")
-        cmd_update(update_parser.parse_args(sys.argv[2:]))
+    argv = sys.argv[1:]
+
+    if not argv or argv[0] in ("-h", "--help"):
+        print(HELP_TEXT)
         return
 
-    if len(sys.argv) > 1 and sys.argv[1] == "uninstall":
-        uninstall_parser = argparse.ArgumentParser(prog="mdlive uninstall")
-        uninstall_parser.add_argument(
-            "-y", "--yes", action="store_true", help="Skip the confirmation prompt"
+    subcommand = argv[0]
+
+    if subcommand == "update":
+        p = argparse.ArgumentParser(prog="mdlive update")
+        cmd_update(p.parse_args(argv[1:]))
+        return
+
+    if subcommand == "uninstall":
+        p = argparse.ArgumentParser(prog="mdlive uninstall")
+        p.add_argument("-y", "--yes", action="store_true")
+        cmd_uninstall(p.parse_args(argv[1:]))
+        return
+
+    if subcommand == "add":
+        p = argparse.ArgumentParser(
+            prog="mdlive add",
+            description="Add a markdown file to the running server at a URL path",
         )
-        cmd_uninstall(uninstall_parser.parse_args(sys.argv[2:]))
+        p.add_argument("file", help="Path to the .md file")
+        p.add_argument("url_path", help="URL path (e.g. 'docs' -> /docs)")
+        p.add_argument("--port", type=int, default=DEFAULT_PORT)
+        cmd_add(p.parse_args(argv[1:]))
         return
 
-    parser = argparse.ArgumentParser(
-        description=(
-            "Serve a Markdown file with live reload.\n\n"
-            "Other commands:\n"
-            "  mdlive update      Update mdlive to the latest release\n"
-            "  mdlive uninstall   Remove the mdlive binary"
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument("file", help="Path to the .md file")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8000)
-    args = parser.parse_args()
+    if subcommand == "remove":
+        p = argparse.ArgumentParser(
+            prog="mdlive remove",
+            description="Remove a URL path from the running server",
+        )
+        p.add_argument("url_path", help="URL path to remove (e.g. 'docs' -> /docs)")
+        p.add_argument("--port", type=int, default=DEFAULT_PORT)
+        cmd_remove(p.parse_args(argv[1:]))
+        return
 
+    # Default: serve <file>
+    p = argparse.ArgumentParser(
+        prog="mdlive",
+        description="Serve a Markdown file with live reload",
+    )
+    p.add_argument("file", help="Path to the .md file")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=DEFAULT_PORT)
+    args = p.parse_args(argv)
     cmd_serve(args)
 
 
 if __name__ == "__main__":
     main()
-
