@@ -44,7 +44,7 @@ jobs:
       - name: Smoke test (actually starts and serves)
         run: |
           echo "# test" > /tmp/test.md
-          ./dist/${{ matrix.asset_name }} /tmp/test.md --port 8123 &
+          ./dist/${{ matrix.asset_name }} /tmp/test.md --port 8123 --no-tui &
           SERVER_PID=$!
           sleep 2
           curl -fsS http://127.0.0.1:8123/ | grep -q "<h1"

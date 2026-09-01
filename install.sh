@@ -44,3 +44,4 @@ case ":$PATH:" in
 esac
 
 info "Run it with: mdlive yourfile.md"
+info "Other commands: mdlive add <file> <path>  |  mdlive remove <path>  |  mdlive --help"

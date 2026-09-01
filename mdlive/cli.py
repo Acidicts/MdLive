@@ -118,11 +118,18 @@ def cmd_uninstall(args):
 
 def cmd_serve(args):
     from mdlive.server import MDLiveServer
-    from mdlive.tui import MDLiveTUI
 
     server = MDLiveServer(args.file)
-    tui = MDLiveTUI(server, host=args.host, port=args.port)
-    tui.run()
+
+    if args.no_tui or not sys.stdout.isatty():
+        import uvicorn
+
+        uvicorn.run(server.app, host=args.host, port=args.port, log_level="info")
+    else:
+        from mdlive.tui import MDLiveTUI
+
+        tui = MDLiveTUI(server, host=args.host, port=args.port)
+        tui.run()
 
 
 def _api_request(method: str, port: int, path: str, data: dict | None = None):
@@ -179,6 +186,9 @@ Usage:
   mdlive remove <path>            Remove /<path>
   mdlive update                   Update mdlive binary
   mdlive uninstall                Remove the mdlive binary
+
+Options:
+  --no-tui                        Run without the TUI (headless/CI)
 """
 
 
@@ -231,6 +241,7 @@ def main():
     p.add_argument("file", help="Path to the .md file")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_PORT)
+    p.add_argument("--no-tui", action="store_true", help="Run without the TUI (headless)")
     args = p.parse_args(argv)
     cmd_serve(args)
 

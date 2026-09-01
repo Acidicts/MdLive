@@ -9,7 +9,7 @@ hiddenimports = ['uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto',
                   'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan',
                   'uvicorn.lifespan.on']
 
-for pkg in ['starlette', 'watchfiles', 'websockets']:
+for pkg in ['starlette', 'watchfiles', 'websockets', 'textual', 'rich']:
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
