@@ -35,13 +35,29 @@ fi
 chmod +x "$INSTALL_DIR/mdlive"
 info "Installed to $INSTALL_DIR/mdlive"
 
-case ":$PATH:" in
-  *":$INSTALL_DIR:"*) ;;
-  *)
-    info "Add this to your shell profile (e.g. ~/.bashrc):"
-    echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
-    ;;
-esac
+add_to_path() {
+  local line="export PATH=\"$INSTALL_DIR:\$PATH\""
+  local profile=""
+
+  case "$(basename "${SHELL:-/bin/bash}")" in
+    zsh)  profile="$HOME/.zshrc" ;;
+    fish) profile="$HOME/.config/fish/config.fish"; line="set -gx PATH $INSTALL_DIR \$PATH" ;;
+    bash) profile="$HOME/.bashrc" ;;
+    *)    profile="$HOME/.profile" ;;
+  esac
+
+  if [ -f "$profile" ] && grep -qF "$INSTALL_DIR" "$profile"; then
+    info "PATH already configured in $profile"
+    return
+  fi
+
+  mkdir -p "$(dirname "$profile")"
+  printf '\n# mdlive\n%s\n' "$line" >> "$profile"
+  info "Added $INSTALL_DIR to PATH in $profile"
+  info "Run: source $profile"
+}
+
+add_to_path
 
 info "Run it with: mdlive yourfile.md"
 info "Other commands: mdlive add <file> <path>  |  mdlive remove <path>  |  mdlive --help"

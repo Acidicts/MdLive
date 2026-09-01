@@ -64,15 +64,16 @@ def _relative_time(ts: float) -> str:
 
 
 class MDLiveServer:
-    def __init__(self, default_md_path: str):
+    def __init__(self, default_md_path: str | None = None):
         self.routes: dict[str, dict] = {}
         self.ws_clients: dict[str, set[WebSocket]] = {}
         self.watch_tasks: dict[str, asyncio.Task] = {}
 
-        default_path = Path(default_md_path).resolve()
-        if not default_path.exists():
-            raise FileNotFoundError(default_path)
-        self._add_route_data("/", default_path)
+        if default_md_path:
+            default_path = Path(default_md_path).resolve()
+            if not default_path.exists():
+                raise FileNotFoundError(default_path)
+            self._add_route_data("/", default_path)
 
         self.app = Starlette(
             routes=[
@@ -118,7 +119,12 @@ class MDLiveServer:
     async def index(self, request: Request):
         entry = self.routes.get("/")
         if not entry:
-            return HTMLResponse("<h1>No default route</h1>", status_code=404)
+            return HTMLResponse(
+                "<h1>mdlive</h1>"
+                "<p>No files served yet.</p>"
+                "<p>Use <code>mdlive add &lt;file&gt; &lt;path&gt;</code> to add a file.</p>",
+                status_code=200,
+            )
         try:
             html = self.render(entry["file"])
         except Exception as e:

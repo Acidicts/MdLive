@@ -47,6 +47,29 @@ def _current_binary_path() -> Path:
     return Path(sys.argv[0]).resolve()
 
 
+def _add_to_path(install_dir: str) -> None:
+    shell = Path(os.environ.get("SHELL", "/bin/bash")).name
+    if shell == "zsh":
+        profile = Path.home() / ".zshrc"
+        line = f'export PATH="{install_dir}:$PATH"'
+    elif shell == "fish":
+        profile = Path.home() / ".config" / "fish" / "config.fish"
+        line = f"set -gx PATH {install_dir} $PATH"
+    else:
+        profile = Path.home() / ".bashrc"
+        line = f'export PATH="{install_dir}:$PATH"'
+
+    if profile.exists() and install_dir in profile.read_text():
+        print(f"PATH already configured in {profile}")
+        return
+
+    profile.parent.mkdir(parents=True, exist_ok=True)
+    with open(profile, "a") as f:
+        f.write(f"\n# mdlive\n{line}\n")
+    print(f"Added {install_dir} to PATH in {profile}")
+    print(f"Run: source {profile}")
+
+
 def cmd_update(args):
     current_path = _current_binary_path()
     print(f"Current binary: {current_path}")
@@ -87,6 +110,7 @@ def cmd_update(args):
 
         tmp_path.replace(current_path)
         print(f"Updated mdlive at {current_path}")
+        _add_to_path(str(current_path.parent))
     except Exception as exc:
         print(f"Update failed: {exc}", file=sys.stderr)
         tmp_path.unlink(missing_ok=True)
@@ -119,7 +143,7 @@ def cmd_uninstall(args):
 def cmd_serve(args):
     from mdlive.server import MDLiveServer
 
-    server = MDLiveServer(args.file)
+    server = MDLiveServer(getattr(args, "file", None))
 
     if args.no_tui or not sys.stdout.isatty():
         import uvicorn
@@ -181,7 +205,8 @@ HELP_TEXT = """\
 mdlive - serve markdown files with live reload
 
 Usage:
-  mdlive <file>                   Start server, serve <file> at /
+  mdlive                           Start server with no files
+  mdlive <file>                    Start server, serve <file> at /
   mdlive add <file> <path>        Add <file> at /<path>
   mdlive remove <path>            Remove /<path>
   mdlive update                   Update mdlive binary
@@ -195,8 +220,20 @@ Options:
 def main():
     argv = sys.argv[1:]
 
-    if not argv or argv[0] in ("-h", "--help"):
+    if argv and argv[0] in ("-h", "--help"):
         print(HELP_TEXT)
+        return
+
+    if not argv:
+        p = argparse.ArgumentParser(
+            prog="mdlive",
+            description="Serve a Markdown file with live reload",
+        )
+        p.add_argument("--host", default="127.0.0.1")
+        p.add_argument("--port", type=int, default=DEFAULT_PORT)
+        p.add_argument("--no-tui", action="store_true", help="Run without the TUI (headless)")
+        args = p.parse_args([])
+        cmd_serve(args)
         return
 
     subcommand = argv[0]
@@ -238,7 +275,7 @@ def main():
         prog="mdlive",
         description="Serve a Markdown file with live reload",
     )
-    p.add_argument("file", help="Path to the .md file")
+    p.add_argument("file", nargs="?", default=None, help="Path to the .md file")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=DEFAULT_PORT)
     p.add_argument("--no-tui", action="store_true", help="Run without the TUI (headless)")
