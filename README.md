@@ -22,6 +22,20 @@ mdlive notes.md --port 8000
 
 Open `http://127.0.0.1:8000`. Edit `notes.md` and the page reloads automatically.
 
+## Updating and uninstalling
+
+```bash
+mdlive update
+```
+
+Downloads the latest release binary and replaces the currently running one in place. Works from any Linux/macOS install location; no need to re-run `install.sh`.
+
+```bash
+mdlive uninstall
+```
+
+Removes the mdlive binary. Prompts for confirmation; pass `-y`/`--yes` to skip the prompt (e.g. `mdlive uninstall -y`).
+
 ## Publishing releases (for maintainers)
 
 Every push to `main` triggers `.github/workflows/release.yml`, which:

@@ -18,6 +18,9 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   body {{ max-width: 800px; margin: 2rem auto; font-family: sans-serif; line-height: 1.6; padding: 0 1rem; }}
   pre {{ background: #f4f4f4; padding: 1rem; overflow-x: auto; }}
   code {{ background: #f4f4f4; padding: 0.1rem 0.3rem; }}
+  ul.checklist {{ list-style: none; padding-left: 0.5rem; }}
+  ul.checklist li {{ margin: 0.3rem 0; }}
+  ul.checklist input[type="checkbox"] {{ margin-right: 0.5rem; transform: scale(1.2); vertical-align: middle; }}
 </style>
 </head>
 <body>
@@ -59,7 +62,7 @@ class MDLiveServer:
         text = self.md_path.read_text(encoding="utf-8")
         body = markdown.markdown(
             text,
-            extensions=["fenced_code", "tables", "toc", "codehilite"],
+            extensions=["fenced_code", "tables", "toc", "codehilite", "markdown_checklist.extension"],
         )
         return PAGE_TEMPLATE.format(title=self.md_path.name, body=body)
 

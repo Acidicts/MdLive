@@ -9,11 +9,13 @@ hiddenimports = ['uvicorn.logging', 'uvicorn.loops', 'uvicorn.loops.auto',
                   'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan',
                   'uvicorn.lifespan.on']
 
-for pkg in ['starlette', 'markdown', 'watchfiles']:
+for pkg in ['starlette', 'markdown', 'watchfiles', 'markdown_checklist', 'websockets']:
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
     hiddenimports += h
+
+hiddenimports += ['markdown_checklist.extension', 'uvicorn.protocols.websockets.websockets_impl']
 
 a = Analysis(
     ['run.py'],
